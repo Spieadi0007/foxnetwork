@@ -172,7 +172,7 @@ export default function OverviewPage() {
                   />
                 )
                 return acc
-              }, [] as JSX.Element[])}
+              }, [] as React.ReactElement[])}
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
