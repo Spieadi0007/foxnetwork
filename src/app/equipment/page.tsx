@@ -223,17 +223,17 @@ export default function ClientEquipmentPage() {
       {/* Header */}
       <div>
         <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          Equipment
+          Assets
         </h1>
         <p className={`mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Monitor and manage your deployed equipment
+          Monitor and manage your deployed assets
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Equipment', value: stats.total, icon: Package, color: 'blue' },
+          { label: 'Total Assets', value: stats.total, icon: Package, color: 'blue' },
           { label: 'Operational', value: stats.operational, icon: CheckCircle, color: 'emerald' },
           { label: 'In Maintenance', value: stats.maintenance, icon: Wrench, color: 'amber' },
           { label: 'Offline', value: stats.offline, icon: AlertTriangle, color: 'red' },

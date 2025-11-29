@@ -60,14 +60,14 @@ const navigation: { section: string; items: NavItem[] }[] = [
     items: [
       { name: 'Requests', href: '/requests', icon: ClipboardList, badge: 3 },
       { name: 'Projects', href: '/projects', icon: FolderKanban },
-      { name: 'Activity Log', href: '/activity', icon: Activity },
+      { name: 'Actions', href: '/activity', icon: Activity },
     ],
   },
   {
     section: 'ASSETS',
     items: [
       { name: 'Locations', href: '/locations', icon: MapPin },
-      { name: 'Equipment', href: '/equipment', icon: Package },
+      { name: 'Assets', href: '/equipment', icon: Package },
       { name: 'Inventory', href: '/inventory', icon: Box },
     ],
   },

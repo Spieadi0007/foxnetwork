@@ -257,10 +257,10 @@ export default function ClientActivityPage() {
       {/* Header */}
       <div>
         <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          Activity Log
+          Actions
         </h1>
         <p className={`mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Track all activities, visits, and updates across your projects
+          Track all actions taken within your projects
         </p>
       </div>
 
