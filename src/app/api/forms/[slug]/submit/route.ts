@@ -94,15 +94,15 @@ export async function POST(
       }
 
       // Update form submission count
-      await supabase.rpc('increment_submission_count', { form_id: form.id })
-        .then(() => {})
-        .catch(() => {
-          // If RPC doesn't exist, update directly
-          supabase
-            .from('location_forms')
-            .update({ submission_count: form.id })
-            .eq('id', form.id)
-        })
+      try {
+        await supabase.rpc('increment_submission_count', { form_id: form.id })
+      } catch {
+        // If RPC doesn't exist, update directly
+        await supabase
+          .from('location_forms')
+          .update({ submission_count: form.id })
+          .eq('id', form.id)
+      }
 
       // TODO: Send notification email if enabled
 
