@@ -464,11 +464,12 @@ export default function ClientActivityPage() {
       if (result.error) {
         toast.error(result.error)
       } else if (result.data) {
-        setServiceTypes(result.data)
+        const data = result.data
+        setServiceTypes(data)
         // Initialize configs for new service types using functional update
         setServiceTypeConfigs(prev => {
           const newConfigs: Record<string, FieldAppConfig> = { ...prev }
-          result.data.forEach(type => {
+          data.forEach(type => {
             if (!newConfigs[type.id]) {
               newConfigs[type.id] = { ...defaultConfig }
             }
@@ -477,8 +478,8 @@ export default function ClientActivityPage() {
         })
         // Select first service type if none selected
         setSelectedServiceType(prev => {
-          if (!prev && result.data.length > 0) {
-            return result.data[0].id
+          if (!prev && data.length > 0) {
+            return data[0].id
           }
           return prev
         })
