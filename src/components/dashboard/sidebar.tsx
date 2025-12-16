@@ -39,6 +39,8 @@ import {
   MapPinned,
   ShoppingCart,
   Box,
+  FolderKanban,
+  Briefcase,
 } from 'lucide-react'
 import type { Company } from '@/types/user'
 import { useTheme } from '@/contexts/theme-context'
@@ -63,6 +65,8 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { name: 'Work Orders', href: '/dashboard/work-orders', icon: ClipboardList },
       { name: 'Map View', href: '/dashboard/map', icon: MapPin },
+      { name: 'Projects', href: '/projects', icon: FolderKanban },
+      { name: 'Services', href: '/services', icon: Briefcase },
     ],
   },
   {

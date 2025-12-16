@@ -1,7 +1,9 @@
 export interface Location {
   id: string
   company_id: string
+  location_id?: string  // Auto-generated: CLIENT_COUNTRY_00001
   name: string
+  client?: string
   code?: string
   type: 'site' | 'warehouse' | 'office' | 'store' | 'other'
   status: 'active' | 'inactive' | 'pending' | 'archived'
@@ -117,8 +119,10 @@ export interface LocationSubmission {
 // Form input types
 export interface CreateLocationInput {
   name: string
+  client?: string
   code?: string
   type?: Location['type']
+  status?: Location['status']
   address_line1?: string
   address_line2?: string
   city?: string
@@ -183,4 +187,136 @@ export interface CSVUploadResult {
     error: string
     data: CSVLocationRow
   }>
+}
+
+// Field Configuration Types
+export type FieldType =
+  | 'text'           // Single line text
+  | 'textarea'       // Long text
+  | 'select'         // Single select dropdown
+  | 'multiselect'    // Multiple select
+  | 'number'         // Number input
+  | 'currency'       // Currency with symbol
+  | 'percent'        // Percentage
+  | 'date'           // Date picker
+  | 'email'          // Email address
+  | 'phone'          // Phone number
+  | 'url'            // URL/Link
+  | 'checkbox'       // Boolean checkbox
+  | 'attachment'     // File attachment
+  | 'user'           // User selector
+  | 'duration'       // Time duration
+  | 'rating'         // Star rating
+
+export interface FieldOption {
+  value: string
+  label: string
+}
+
+export interface ValidationRules {
+  min_length?: number
+  max_length?: number
+  min?: number
+  max?: number
+  pattern?: string
+  pattern_message?: string
+}
+
+export interface LocationFieldDefinition {
+  id: string
+  field_key: string
+  field_label: string
+  field_type: FieldType
+  category: 'general' | 'address' | 'contact' | 'operational' | 'custom'
+  display_order: number
+  is_system_field: boolean
+  is_platform_required: boolean
+  is_client_configurable: boolean
+  options: FieldOption[]
+  validation_rules: ValidationRules
+  placeholder?: string
+  help_text?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface LocationFieldConfig {
+  id: string
+  company_id: string
+  field_definition_id: string
+  is_required: boolean
+  is_visible: boolean
+  custom_label?: string
+  custom_placeholder?: string
+  custom_help_text?: string
+  display_order?: number
+  created_at: string
+  updated_at: string
+  // Joined field definition
+  field_definition?: LocationFieldDefinition
+}
+
+export interface LocationCustomField {
+  id: string
+  company_id: string
+  field_key: string
+  field_label: string
+  field_type: FieldType
+  is_required: boolean
+  is_visible: boolean
+  display_order: number
+  category: string
+  options: FieldOption[]
+  validation_rules: ValidationRules
+  placeholder?: string
+  help_text?: string
+  default_value?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Combined field for rendering forms
+export interface ResolvedField {
+  key: string
+  label: string
+  type: FieldType
+  category: string
+  displayOrder: number
+  isRequired: boolean
+  isVisible: boolean
+  isSystemField: boolean
+  isPlatformRequired: boolean
+  isClientConfigurable: boolean
+  isCustomField: boolean
+  options: FieldOption[]
+  validationRules: ValidationRules
+  placeholder?: string
+  helpText?: string
+  defaultValue?: string
+}
+
+export interface CreateCustomFieldInput {
+  field_key: string
+  field_label: string
+  field_type: FieldType
+  is_required?: boolean
+  is_visible?: boolean
+  display_order?: number
+  options?: FieldOption[]
+  validation_rules?: ValidationRules
+  placeholder?: string
+  help_text?: string
+  default_value?: string
+}
+
+export interface UpdateFieldConfigInput {
+  field_definition_id: string
+  is_required?: boolean
+  is_visible?: boolean
+  custom_label?: string
+  custom_placeholder?: string
+  custom_help_text?: string
+  display_order?: number
 }

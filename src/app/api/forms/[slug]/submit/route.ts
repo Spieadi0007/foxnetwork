@@ -14,7 +14,7 @@ export async function POST(
     // Get form configuration
     const { data: form, error: formError } = await supabase
       .from('location_forms')
-      .select('id, company_id, fields_config, requires_approval, notify_on_submission, notification_emails, status')
+      .select('id, company_id, fields_config, requires_approval, notify_on_submission, notification_emails, status, submission_count')
       .eq('slug', slug)
       .eq('status', 'active')
       .single()
@@ -100,7 +100,7 @@ export async function POST(
         // If RPC doesn't exist, update directly
         await supabase
           .from('location_forms')
-          .update({ submission_count: form.id })
+          .update({ submission_count: (form.submission_count || 0) + 1 })
           .eq('id', form.id)
       }
 

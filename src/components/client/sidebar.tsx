@@ -30,6 +30,8 @@ import {
   Headphones,
   LifeBuoy,
   Map,
+  Briefcase,
+  Library,
 } from 'lucide-react'
 import type { Company } from '@/types/user'
 import { useTheme } from '@/contexts/theme-context'
@@ -60,6 +62,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
     items: [
       { name: 'Requests', href: '/requests', icon: ClipboardList, badge: 3 },
       { name: 'Projects', href: '/projects', icon: FolderKanban },
+      { name: 'Services', href: '/services', icon: Briefcase },
       { name: 'Actions', href: '/activity', icon: Activity },
     ],
   },
@@ -69,6 +72,7 @@ const navigation: { section: string; items: NavItem[] }[] = [
       { name: 'Locations', href: '/locations', icon: MapPin },
       { name: 'Assets', href: '/equipment', icon: Package },
       { name: 'Inventory', href: '/inventory', icon: Box },
+      { name: 'Library', href: '/library', icon: Library },
     ],
   },
   {

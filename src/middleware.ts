@@ -55,6 +55,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Redirect /dashboard/locations to /locations (canonical URL)
+  if (request.nextUrl.pathname === '/dashboard/locations') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/locations'
+    return NextResponse.redirect(url)
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

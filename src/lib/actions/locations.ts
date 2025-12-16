@@ -62,12 +62,67 @@ export async function createLocation(
     return { data: null, error: 'Not authenticated' }
   }
 
+  // Look up client name/code from library_items if client is a UUID
+  let clientName: string | null = null
+  let clientCode: string | null = null
+  if (input.client) {
+    const { data: clientItem } = await supabase
+      .from('library_items')
+      .select('name, code')
+      .eq('id', input.client)
+      .single()
+
+    if (clientItem) {
+      clientName = clientItem.name
+      clientCode = clientItem.code
+    } else {
+      // If not a UUID, use the value directly as the name
+      clientName = input.client
+    }
+  }
+
+  // Look up country name/code from library_items if country is a UUID
+  let countryName: string | null = null
+  let countryCode: string | null = null
+  if (input.country) {
+    const { data: countryItem } = await supabase
+      .from('library_items')
+      .select('name, code')
+      .eq('id', input.country)
+      .single()
+
+    if (countryItem) {
+      countryName = countryItem.name
+      countryCode = countryItem.code
+    } else {
+      // If not a UUID, use the value directly as the name
+      countryName = input.country
+    }
+  }
+
+  // Generate location_id using the PostgreSQL function
+  const { data: locationIdResult, error: locationIdError } = await supabase
+    .rpc('generate_location_id', {
+      p_company_id: companyId,
+      p_client_name: clientName,
+      p_client_code: clientCode,
+      p_country_name: countryName,
+      p_country_code: countryCode,
+    })
+
+  if (locationIdError) {
+    console.error('Failed to generate location_id:', locationIdError)
+    // Continue without location_id if generation fails
+  }
+
   const { data, error } = await supabase
     .from('locations')
     .insert({
       company_id: companyId,
+      location_id: locationIdResult || null,
       name: input.name,
-      code: input.code,
+      client: input.client,
+      code: locationIdResult || null, // Auto-generated, same as location_id
       type: input.type || 'site',
       status: 'active',
       address_line1: input.address_line1,
@@ -75,7 +130,7 @@ export async function createLocation(
       city: input.city,
       state: input.state,
       postal_code: input.postal_code,
-      country: input.country || 'France',
+      country: input.country,
       latitude: input.latitude,
       longitude: input.longitude,
       contact_name: input.contact_name,
