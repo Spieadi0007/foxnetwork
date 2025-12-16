@@ -406,6 +406,71 @@ export async function getChildItems(parentId: string): Promise<{
 }
 
 // ==================
+// SERVICE TYPES (children of project types)
+// ==================
+
+export async function getServiceTypes(): Promise<{
+  data: LibraryItem[] | null
+  error: string | null
+}> {
+  try {
+    const supabase = await createClient()
+
+    // Get company_id from current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { data: null, error: 'Not authenticated' }
+    }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData?.company_id) {
+      return { data: null, error: 'No company found' }
+    }
+
+    // Get the project_types category
+    const { data: category } = await supabase
+      .from('library_categories')
+      .select('id')
+      .eq('slug', 'project_types')
+      .single()
+
+    if (!category) {
+      return { data: [], error: null }
+    }
+
+    // Get only items with a parent_id (service types, not project types)
+    const { data, error } = await supabase
+      .from('library_items')
+      .select(`
+        *,
+        category:library_categories(*),
+        parent:library_items!parent_id(id, name, code)
+      `)
+      .eq('company_id', userData.company_id)
+      .eq('category_id', category.id)
+      .not('parent_id', 'is', null)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching service types:', error)
+      return { data: null, error: error.message }
+    }
+
+    return { data, error: null }
+  } catch (err) {
+    console.error('Error in getServiceTypes:', err)
+    return { data: null, error: 'Failed to fetch service types' }
+  }
+}
+
+// ==================
 // STATS
 // ==================
 

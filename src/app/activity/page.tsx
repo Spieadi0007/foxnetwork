@@ -51,7 +51,9 @@ import {
 import { useTheme } from '@/contexts/theme-context'
 import { toast } from 'sonner'
 import { getModulesWithConfig, updateModuleConfig } from '@/lib/actions/action-modules'
+import { getServiceTypes } from '@/lib/actions/library'
 import type { ActionModuleWithConfig, ActionModuleCategory } from '@/types/actions'
+import type { LibraryItem } from '@/types/library'
 import { CATEGORY_LABELS } from '@/types/actions'
 
 // Information fields that can be displayed in the field app
@@ -384,15 +386,6 @@ export default function ClientActivityPage() {
   const [loadingModules, setLoadingModules] = useState(false)
   const [savingModule, setSavingModule] = useState<string | null>(null)
 
-  // Service types for Field App configurations
-  const SERVICE_TYPES = [
-    { key: 'survey', label: 'Survey', icon: 'FileText', color: 'blue' },
-    { key: 'installation', label: 'Installation', icon: 'Wrench', color: 'emerald' },
-    { key: 'maintenance', label: 'Maintenance', icon: 'Settings', color: 'amber' },
-    { key: 'repair', label: 'Repair', icon: 'Wrench', color: 'red' },
-    { key: 'inspection', label: 'Inspection', icon: 'Eye', color: 'purple' },
-  ]
-
   // Field App configuration per service type
   interface FieldAppConfig {
     infoFields: string[]
@@ -406,34 +399,11 @@ export default function ClientActivityPage() {
     screenType: 'cards',
   }
 
-  const [selectedServiceType, setSelectedServiceType] = useState<string>('survey')
-  const [serviceTypeConfigs, setServiceTypeConfigs] = useState<Record<string, FieldAppConfig>>({
-    survey: {
-      infoFields: ['location_name', 'location_address', 'location_client', 'service_type', 'service_issue'],
-      enabledModules: ['photos', 'notes'],
-      screenType: 'cards',
-    },
-    installation: {
-      infoFields: ['location_name', 'location_address', 'location_client', 'location_contact', 'service_type', 'service_issue', 'service_description'],
-      enabledModules: ['start_time', 'end_time', 'parts_used', 'customer_signature', 'technician_signature', 'photos'],
-      screenType: 'details',
-    },
-    maintenance: {
-      infoFields: ['location_name', 'location_address', 'service_type', 'service_issue'],
-      enabledModules: ['start_time', 'end_time', 'checklist', 'notes', 'photos'],
-      screenType: 'details',
-    },
-    repair: {
-      infoFields: ['location_name', 'location_address', 'location_client', 'service_type', 'service_issue', 'service_description'],
-      enabledModules: ['start_time', 'end_time', 'parts_used', 'photos', 'notes', 'customer_signature'],
-      screenType: 'details',
-    },
-    inspection: {
-      infoFields: ['location_name', 'location_address', 'service_type'],
-      enabledModules: ['checklist', 'photos', 'notes'],
-      screenType: 'cards',
-    },
-  })
+  // Service types from library
+  const [serviceTypes, setServiceTypes] = useState<LibraryItem[]>([])
+  const [loadingServiceTypes, setLoadingServiceTypes] = useState(false)
+  const [selectedServiceType, setSelectedServiceType] = useState<string>('')
+  const [serviceTypeConfigs, setServiceTypeConfigs] = useState<Record<string, FieldAppConfig>>({})
 
   // Get current config for selected service type
   const currentConfig = serviceTypeConfigs[selectedServiceType] || defaultConfig
@@ -486,6 +456,41 @@ export default function ClientActivityPage() {
     'notes',
   ])
 
+  // Load service types from library (children of project types)
+  const loadServiceTypes = useCallback(async () => {
+    setLoadingServiceTypes(true)
+    try {
+      const result = await getServiceTypes()
+      if (result.error) {
+        toast.error(result.error)
+      } else if (result.data) {
+        setServiceTypes(result.data)
+        // Initialize configs for new service types using functional update
+        setServiceTypeConfigs(prev => {
+          const newConfigs: Record<string, FieldAppConfig> = { ...prev }
+          result.data.forEach(type => {
+            if (!newConfigs[type.id]) {
+              newConfigs[type.id] = { ...defaultConfig }
+            }
+          })
+          return newConfigs
+        })
+        // Select first service type if none selected
+        setSelectedServiceType(prev => {
+          if (!prev && result.data.length > 0) {
+            return result.data[0].id
+          }
+          return prev
+        })
+      }
+    } catch (error) {
+      console.error('Error loading service types:', error)
+      toast.error('Failed to load service types')
+    } finally {
+      setLoadingServiceTypes(false)
+    }
+  }, [])
+
   // Load action modules
   const loadModules = useCallback(async () => {
     setLoadingModules(true)
@@ -508,7 +513,10 @@ export default function ClientActivityPage() {
     if (activeTab === 'modules' || activeTab === 'support') {
       loadModules()
     }
-  }, [activeTab, loadModules])
+    if (activeTab === 'modules') {
+      loadServiceTypes()
+    }
+  }, [activeTab, loadModules, loadServiceTypes])
 
   const filteredActivities = mockActivities.filter((activity) => {
     const matchesSearch =
@@ -939,68 +947,62 @@ export default function ClientActivityPage() {
               </div>
             </div>
             <div className="p-4">
-              <div className="flex flex-wrap gap-2">
-                {SERVICE_TYPES.map(type => {
-                  const config = serviceTypeConfigs[type.key]
-                  const moduleCount = config?.enabledModules?.length || 0
-                  const isSelected = selectedServiceType === type.key
-                  return (
-                    <button
-                      key={type.key}
-                      onClick={() => setSelectedServiceType(type.key)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all ${
-                        isSelected
-                          ? type.color === 'blue' ? 'border-blue-500 bg-blue-500/10' :
-                            type.color === 'emerald' ? 'border-emerald-500 bg-emerald-500/10' :
-                            type.color === 'amber' ? 'border-amber-500 bg-amber-500/10' :
-                            type.color === 'red' ? 'border-red-500 bg-red-500/10' :
-                            'border-purple-500 bg-purple-500/10'
-                          : isDark ? 'border-white/10 hover:border-white/20 bg-white/5' : 'border-slate-200 hover:border-slate-300 bg-slate-50'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        isSelected
-                          ? type.color === 'blue' ? 'bg-blue-500 text-white' :
-                            type.color === 'emerald' ? 'bg-emerald-500 text-white' :
-                            type.color === 'amber' ? 'bg-amber-500 text-white' :
-                            type.color === 'red' ? 'bg-red-500 text-white' :
-                            'bg-purple-500 text-white'
-                          : isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-500'
-                      }`}>
-                        {type.icon === 'FileText' && <FileText className="w-4 h-4" />}
-                        {type.icon === 'Wrench' && <Wrench className="w-4 h-4" />}
-                        {type.icon === 'Settings' && <Settings className="w-4 h-4" />}
-                        {type.icon === 'Eye' && <Eye className="w-4 h-4" />}
-                      </div>
-                      <div className="text-left">
-                        <p className={`font-medium text-sm ${
+              {loadingServiceTypes ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <span className={`ml-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Loading service types...
+                  </span>
+                </div>
+              ) : serviceTypes.length === 0 ? (
+                <div className={`text-center py-8 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <Wrench className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No service types configured</p>
+                  <p className="text-xs mt-1">Add service types under Project Types in Library</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {serviceTypes.map(type => {
+                    const config = serviceTypeConfigs[type.id]
+                    const moduleCount = config?.enabledModules?.length || 0
+                    const isSelected = selectedServiceType === type.id
+                    return (
+                      <button
+                        key={type.id}
+                        onClick={() => setSelectedServiceType(type.id)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all ${
                           isSelected
-                            ? type.color === 'blue' ? 'text-blue-600' :
-                              type.color === 'emerald' ? 'text-emerald-600' :
-                              type.color === 'amber' ? 'text-amber-600' :
-                              type.color === 'red' ? 'text-red-600' :
-                              'text-purple-600'
-                            : isDark ? 'text-white' : 'text-slate-900'
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : isDark ? 'border-white/10 hover:border-white/20 bg-white/5' : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-blue-500 text-white'
+                            : isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-500'
                         }`}>
-                          {type.label}
-                        </p>
-                        <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                          {moduleCount} modules
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <CheckCircle className={`w-5 h-5 ml-2 ${
-                          type.color === 'blue' ? 'text-blue-500' :
-                          type.color === 'emerald' ? 'text-emerald-500' :
-                          type.color === 'amber' ? 'text-amber-500' :
-                          type.color === 'red' ? 'text-red-500' :
-                          'text-purple-500'
-                        }`} />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
+                          <Wrench className="w-4 h-4" />
+                        </div>
+                        <div className="text-left">
+                          <p className={`font-medium text-sm ${
+                            isSelected
+                              ? 'text-blue-600'
+                              : isDark ? 'text-white' : 'text-slate-900'
+                          }`}>
+                            {type.name}
+                          </p>
+                          <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {moduleCount} modules
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle className="w-5 h-5 ml-2 text-blue-500" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1370,15 +1372,13 @@ export default function ClientActivityPage() {
                     Mobile App Preview
                   </h3>
                 </div>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                  selectedServiceType === 'survey' ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700' :
-                  selectedServiceType === 'installation' ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700' :
-                  selectedServiceType === 'maintenance' ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700' :
-                  selectedServiceType === 'repair' ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700' :
-                  isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700'
-                }`}>
-                  {SERVICE_TYPES.find(t => t.key === selectedServiceType)?.label}
-                </span>
+                {selectedServiceType && (
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                    isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {serviceTypes.find(t => t.id === selectedServiceType)?.name || 'Select Type'}
+                  </span>
+                )}
               </div>
 
               <div className="p-4">
