@@ -384,16 +384,83 @@ export default function ClientActivityPage() {
   const [loadingModules, setLoadingModules] = useState(false)
   const [savingModule, setSavingModule] = useState<string | null>(null)
 
-  // Information fields state - which fields to show in the field app
-  const [selectedInfoFields, setSelectedInfoFields] = useState<string[]>([
-    'location_name',
-    'location_address',
-    'location_client',
-    'service_type',
-    'service_issue',
-  ])
+  // Service types for Field App configurations
+  const SERVICE_TYPES = [
+    { key: 'survey', label: 'Survey', icon: 'FileText', color: 'blue' },
+    { key: 'installation', label: 'Installation', icon: 'Wrench', color: 'emerald' },
+    { key: 'maintenance', label: 'Maintenance', icon: 'Settings', color: 'amber' },
+    { key: 'repair', label: 'Repair', icon: 'Wrench', color: 'red' },
+    { key: 'inspection', label: 'Inspection', icon: 'Eye', color: 'purple' },
+  ]
+
+  // Field App configuration per service type
+  interface FieldAppConfig {
+    infoFields: string[]
+    enabledModules: string[]
+    screenType: 'cards' | 'details'
+  }
+
+  const defaultConfig: FieldAppConfig = {
+    infoFields: ['location_name', 'location_address', 'location_client', 'service_type', 'service_issue'],
+    enabledModules: [],
+    screenType: 'cards',
+  }
+
+  const [selectedServiceType, setSelectedServiceType] = useState<string>('survey')
+  const [serviceTypeConfigs, setServiceTypeConfigs] = useState<Record<string, FieldAppConfig>>({
+    survey: {
+      infoFields: ['location_name', 'location_address', 'location_client', 'service_type', 'service_issue'],
+      enabledModules: ['photos', 'notes'],
+      screenType: 'cards',
+    },
+    installation: {
+      infoFields: ['location_name', 'location_address', 'location_client', 'location_contact', 'service_type', 'service_issue', 'service_description'],
+      enabledModules: ['start_time', 'end_time', 'parts_used', 'customer_signature', 'technician_signature', 'photos'],
+      screenType: 'details',
+    },
+    maintenance: {
+      infoFields: ['location_name', 'location_address', 'service_type', 'service_issue'],
+      enabledModules: ['start_time', 'end_time', 'checklist', 'notes', 'photos'],
+      screenType: 'details',
+    },
+    repair: {
+      infoFields: ['location_name', 'location_address', 'location_client', 'service_type', 'service_issue', 'service_description'],
+      enabledModules: ['start_time', 'end_time', 'parts_used', 'photos', 'notes', 'customer_signature'],
+      screenType: 'details',
+    },
+    inspection: {
+      infoFields: ['location_name', 'location_address', 'service_type'],
+      enabledModules: ['checklist', 'photos', 'notes'],
+      screenType: 'cards',
+    },
+  })
+
+  // Get current config for selected service type
+  const currentConfig = serviceTypeConfigs[selectedServiceType] || defaultConfig
+
+  // Update config for current service type
+  const updateCurrentConfig = (updates: Partial<FieldAppConfig>) => {
+    setServiceTypeConfigs(prev => ({
+      ...prev,
+      [selectedServiceType]: {
+        ...prev[selectedServiceType],
+        ...updates,
+      },
+    }))
+  }
+
+  // Legacy state mappings for compatibility
+  const selectedInfoFields = currentConfig.infoFields
+  const setSelectedInfoFields = (updater: string[] | ((prev: string[]) => string[])) => {
+    const newFields = typeof updater === 'function' ? updater(currentConfig.infoFields) : updater
+    updateCurrentConfig({ infoFields: newFields })
+  }
+  const infoScreenType = currentConfig.screenType
+  const setInfoScreenType = (type: 'cards' | 'details') => {
+    updateCurrentConfig({ screenType: type })
+  }
+
   const [expandedInfoSection, setExpandedInfoSection] = useState<string | null>('location')
-  const [infoScreenType, setInfoScreenType] = useState<'cards' | 'details'>('cards')
 
   // Support App state - which fields and modules to show in the support app
   const [selectedSupportInfoFields, setSelectedSupportInfoFields] = useState<string[]>([
@@ -570,13 +637,13 @@ export default function ClientActivityPage() {
         >
           <Smartphone className="w-4 h-4" />
           Field App
-          {actionModules.filter(m => m.is_enabled).length > 0 && (
+          {currentConfig.enabledModules.length > 0 && (
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               activeTab === 'modules'
                 ? 'bg-white/20'
                 : isDark ? 'bg-white/10' : 'bg-slate-200'
             }`}>
-              {actionModules.filter(m => m.is_enabled).length}
+              {currentConfig.enabledModules.length}
             </span>
           )}
         </button>
@@ -854,7 +921,90 @@ export default function ClientActivityPage() {
 
       {/* Modules Tab */}
       {activeTab === 'modules' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          {/* Service Type Selector */}
+          <div className={`rounded-2xl border overflow-hidden ${
+            isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'
+          }`}>
+            <div className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    Service Type Configuration
+                  </h3>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Configure different Field App layouts for each service type
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {SERVICE_TYPES.map(type => {
+                  const config = serviceTypeConfigs[type.key]
+                  const moduleCount = config?.enabledModules?.length || 0
+                  const isSelected = selectedServiceType === type.key
+                  return (
+                    <button
+                      key={type.key}
+                      onClick={() => setSelectedServiceType(type.key)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? type.color === 'blue' ? 'border-blue-500 bg-blue-500/10' :
+                            type.color === 'emerald' ? 'border-emerald-500 bg-emerald-500/10' :
+                            type.color === 'amber' ? 'border-amber-500 bg-amber-500/10' :
+                            type.color === 'red' ? 'border-red-500 bg-red-500/10' :
+                            'border-purple-500 bg-purple-500/10'
+                          : isDark ? 'border-white/10 hover:border-white/20 bg-white/5' : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isSelected
+                          ? type.color === 'blue' ? 'bg-blue-500 text-white' :
+                            type.color === 'emerald' ? 'bg-emerald-500 text-white' :
+                            type.color === 'amber' ? 'bg-amber-500 text-white' :
+                            type.color === 'red' ? 'bg-red-500 text-white' :
+                            'bg-purple-500 text-white'
+                          : isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        {type.icon === 'FileText' && <FileText className="w-4 h-4" />}
+                        {type.icon === 'Wrench' && <Wrench className="w-4 h-4" />}
+                        {type.icon === 'Settings' && <Settings className="w-4 h-4" />}
+                        {type.icon === 'Eye' && <Eye className="w-4 h-4" />}
+                      </div>
+                      <div className="text-left">
+                        <p className={`font-medium text-sm ${
+                          isSelected
+                            ? type.color === 'blue' ? 'text-blue-600' :
+                              type.color === 'emerald' ? 'text-emerald-600' :
+                              type.color === 'amber' ? 'text-amber-600' :
+                              type.color === 'red' ? 'text-red-600' :
+                              'text-purple-600'
+                            : isDark ? 'text-white' : 'text-slate-900'
+                        }`}>
+                          {type.label}
+                        </p>
+                        <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {moduleCount} modules
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle className={`w-5 h-5 ml-2 ${
+                          type.color === 'blue' ? 'text-blue-500' :
+                          type.color === 'emerald' ? 'text-emerald-500' :
+                          type.color === 'amber' ? 'text-amber-500' :
+                          type.color === 'red' ? 'text-red-500' :
+                          'text-purple-500'
+                        }`} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Panel - Configuration */}
           <div className="space-y-4">
             {/* Information Fields Section */}
@@ -1135,6 +1285,7 @@ export default function ClientActivityPage() {
                         </div>
                         {categoryModules.map(module => {
                           const IconComponent = getModuleIcon(module.icon)
+                          const isModuleEnabled = currentConfig.enabledModules.includes(module.key)
                           return (
                             <div
                               key={module.id}
@@ -1143,12 +1294,12 @@ export default function ClientActivityPage() {
                               }`}
                             >
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                module.is_enabled
+                                isModuleEnabled
                                   ? isDark ? 'bg-blue-500/20' : 'bg-blue-100'
                                   : isDark ? 'bg-white/5' : 'bg-slate-100'
                               }`}>
                                 <IconComponent className={`w-5 h-5 ${
-                                  module.is_enabled
+                                  isModuleEnabled
                                     ? 'text-blue-500'
                                     : isDark ? 'text-slate-500' : 'text-slate-400'
                                 }`} />
@@ -1159,13 +1310,6 @@ export default function ClientActivityPage() {
                                   <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                     {module.effective_label}
                                   </span>
-                                  {module.is_required && (
-                                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                      isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'
-                                    }`}>
-                                      Required
-                                    </span>
-                                  )}
                                 </div>
                                 <p className={`text-sm truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                   {module.effective_description}
@@ -1173,84 +1317,34 @@ export default function ClientActivityPage() {
                               </div>
 
                               <div className="flex items-center gap-3">
-                                {/* Required Toggle */}
-                                {module.is_enabled && (
-                                  <button
-                                    onClick={async () => {
-                                      setSavingModule(module.id)
-                                      const result = await updateModuleConfig({
-                                        module_id: module.id,
-                                        is_enabled: true,
-                                        is_required: !module.is_required,
-                                      })
-                                      if (result.error) {
-                                        toast.error(result.error)
-                                      } else {
-                                        setActionModules(prev =>
-                                          prev.map(m =>
-                                            m.id === module.id
-                                              ? { ...m, is_required: !m.is_required }
-                                              : m
-                                          )
-                                        )
-                                      }
-                                      setSavingModule(null)
-                                    }}
-                                    disabled={savingModule === module.id}
-                                    className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
-                                      module.is_required
-                                        ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700'
-                                        : isDark ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                    }`}
-                                    title={module.is_required ? 'Click to make optional' : 'Click to make required'}
-                                  >
-                                    {module.is_required ? 'Required' : 'Optional'}
-                                  </button>
-                                )}
-
                                 {/* Enable/Disable Toggle */}
                                 <button
-                                  onClick={async () => {
-                                    setSavingModule(module.id)
-                                    const result = await updateModuleConfig({
-                                      module_id: module.id,
-                                      is_enabled: !module.is_enabled,
-                                      is_required: !module.is_enabled ? module.is_required : false,
-                                    })
-                                    if (result.error) {
-                                      toast.error(result.error)
+                                  onClick={() => {
+                                    if (isModuleEnabled) {
+                                      updateCurrentConfig({
+                                        enabledModules: currentConfig.enabledModules.filter(k => k !== module.key)
+                                      })
                                     } else {
-                                      setActionModules(prev =>
-                                        prev.map(m =>
-                                          m.id === module.id
-                                            ? { ...m, is_enabled: !m.is_enabled, is_required: !m.is_enabled ? m.is_required : false }
-                                            : m
-                                        )
-                                      )
-                                      toast.success(module.is_enabled ? 'Module disabled' : 'Module enabled')
+                                      updateCurrentConfig({
+                                        enabledModules: [...currentConfig.enabledModules, module.key]
+                                      })
                                     }
-                                    setSavingModule(null)
                                   }}
-                                  disabled={savingModule === module.id}
                                   className="relative"
                                 >
-                                  {savingModule === module.id ? (
-                                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                                  ) : (
+                                  <div
+                                    className={`w-11 h-6 rounded-full transition-colors relative ${
+                                      isModuleEnabled
+                                        ? 'bg-gradient-to-r from-blue-500 to-cyan-600'
+                                        : isDark ? 'bg-white/10' : 'bg-slate-200'
+                                    }`}
+                                  >
                                     <div
-                                      className={`w-11 h-6 rounded-full transition-colors relative ${
-                                        module.is_enabled
-                                          ? 'bg-gradient-to-r from-blue-500 to-cyan-600'
-                                          : isDark ? 'bg-white/10' : 'bg-slate-200'
+                                      className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                                        isModuleEnabled ? 'left-6' : 'left-1'
                                       }`}
-                                    >
-                                      <div
-                                        className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                                          module.is_enabled ? 'left-6' : 'left-1'
-                                        }`}
-                                      />
-                                    </div>
-                                  )}
+                                    />
+                                  </div>
                                 </button>
                               </div>
                             </div>
@@ -1269,11 +1363,22 @@ export default function ClientActivityPage() {
             <div className={`rounded-2xl border overflow-hidden ${
               isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'
             }`}>
-              <div className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'} flex items-center gap-2`}>
-                <Smartphone className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
-                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Mobile App Preview
-                </h3>
+              <div className={`p-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'} flex items-center justify-between`}>
+                <div className="flex items-center gap-2">
+                  <Smartphone className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    Mobile App Preview
+                  </h3>
+                </div>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                  selectedServiceType === 'survey' ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700' :
+                  selectedServiceType === 'installation' ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700' :
+                  selectedServiceType === 'maintenance' ? isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-700' :
+                  selectedServiceType === 'repair' ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700' :
+                  isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {SERVICE_TYPES.find(t => t.key === selectedServiceType)?.label}
+                </span>
               </div>
 
               <div className="p-4">
@@ -1303,7 +1408,7 @@ export default function ClientActivityPage() {
                     </div>
 
                     {/* Service Information Section - Cards View (only when no modules enabled) */}
-                    {infoScreenType === 'cards' && selectedInfoFields.length > 0 && actionModules.filter(m => m.is_enabled).length === 0 && (
+                    {infoScreenType === 'cards' && selectedInfoFields.length > 0 && currentConfig.enabledModules.length === 0 && (
                       <div className={`p-2.5 rounded-xl ${
                         isDark ? 'bg-white/5' : 'bg-slate-50'
                       }`}>
@@ -1420,7 +1525,7 @@ export default function ClientActivityPage() {
                     )}
 
                     {/* Service Information Section - Details View (always shown when modules are enabled) */}
-                    {(infoScreenType === 'details' || actionModules.filter(m => m.is_enabled).length > 0) && selectedInfoFields.length > 0 && (
+                    {(infoScreenType === 'details' || currentConfig.enabledModules.length > 0) && selectedInfoFields.length > 0 && (
                       <div className="space-y-3">
                         {/* Location Details Section */}
                         {selectedInfoFields.filter(f => f.startsWith('location_')).length > 0 && (
@@ -1609,7 +1714,7 @@ export default function ClientActivityPage() {
                     )}
 
                     {/* Enabled Modules */}
-                    {actionModules.filter(m => m.is_enabled).length === 0 && selectedInfoFields.length === 0 ? (
+                    {currentConfig.enabledModules.length === 0 && selectedInfoFields.length === 0 ? (
                       <div className="text-center py-8">
                         <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3 ${
                           isDark ? 'bg-white/5' : 'bg-slate-100'
@@ -1626,7 +1731,7 @@ export default function ClientActivityPage() {
                     ) : (
                       <div className="space-y-2">
                         {actionModules
-                          .filter(m => m.is_enabled)
+                          .filter(m => currentConfig.enabledModules.includes(m.key))
                           .sort((a, b) => a.display_order - b.display_order)
                           .map(module => {
                             const IconComponent = getModuleIcon(module.icon)
@@ -1647,9 +1752,6 @@ export default function ClientActivityPage() {
                                     isDark ? 'text-white' : 'text-slate-900'
                                   }`}>
                                     {module.effective_label}
-                                    {module.is_required && (
-                                      <span className="text-red-500 ml-1">*</span>
-                                    )}
                                   </span>
                                 </div>
                                 {/* Placeholder for field type */}
@@ -1661,7 +1763,7 @@ export default function ClientActivityPage() {
                     )}
 
                     {/* Submit Button */}
-                    {actionModules.filter(m => m.is_enabled).length > 0 && (
+                    {currentConfig.enabledModules.length > 0 && (
                       <div className="pt-3">
                         <div className={`w-full py-2.5 rounded-xl text-center text-sm font-medium ${
                           isDark
@@ -1684,6 +1786,7 @@ export default function ClientActivityPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
